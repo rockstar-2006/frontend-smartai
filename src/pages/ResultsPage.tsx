@@ -1,231 +1,116 @@
-<<<<<<< HEAD
-// src/pages/ResultsPage.tsx
-=======
->>>>>>> 8ca4e2e5c968921e3f5aff4a4124db26d5062779
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { quizAPI } from '@/services/api';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { FileText, Users, Clock, TrendingUp } from 'lucide-react';
-import { toast } from 'sonner';
+// src/services/api.ts
+import axios from 'axios';
+import { Quiz, Student } from '@/types';
 
-interface QuizWithStats {
-  _id: string;
-  title: string;
-  description?: string;
-  duration?: number | null;
-  createdAt: string;
-  attemptCount: number;
-  submittedCount: number;
-  averageScore?: number;
-}
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
-export default function ResultsPage() {
-  const navigate = useNavigate();
-  const [quizzes, setQuizzes] = useState<QuizWithStats[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  withCredentials: true, // Enable sending cookies
+});
 
-  useEffect(() => {
-    fetchQuizzesWithStats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+// Quiz API
+export const quizAPI = {
+  // Save quiz: backend will create and return quizId
+  save: async (quiz: Partial<Quiz>): Promise<{ success: boolean; quizId: string; quiz?: any }> => {
+    const response = await api.post('/quiz/save', quiz);
+    return response.data;
+  },
 
-  const fetchQuizzesWithStats = async () => {
-    setLoading(true);
-    setLoadError(null);
+  // Share: backend expects { quizId, recipients, message?, expiresInHours? }
+  share: async (shareData: {
+    quizId: string;
+    recipients: string[];
+    message?: string;
+    expiresInHours?: number;
+  }): Promise<{ success: boolean; message?: string; links?: Array<{ email: string; link: string; status: string; shareId?: string }>; failed?: any[] }> => {
+    const response = await api.post('/quiz/share', shareData);
+    return response.data;
+  },
 
-    try {
-      // Primary attempt: aggregated stats endpoint
-      const data = await quizAPI.getAllWithStats();
-      // normalize returned items to QuizWithStats shape (defensive)
-      const normalized = (data || []).map((q: any) => ({
-        _id: q._id,
-        title: q.title,
-        description: q.description || '',
-        duration: q.duration ?? null,
-        createdAt: q.createdAt,
-        attemptCount: typeof q.attemptCount === 'number' ? q.attemptCount : 0,
-        submittedCount: typeof q.submittedCount === 'number' ? q.submittedCount : 0,
-        averageScore: typeof q.averageScore === 'number' ? q.averageScore : undefined
-      })) as QuizWithStats[];
+  getAll: async (): Promise<Quiz[]> => {
+    const response = await api.get('/quiz/all');
+    return response.data;
+  },
 
-      setQuizzes(normalized);
-    } catch (err: any) {
-      console.error('Error fetching quiz results:', err);
+  delete: async (quizId: string): Promise<{ success: boolean }> => {
+    const response = await api.delete(`/quiz/${quizId}`);
+    return response.data;
+  },
 
-      // Auth errors -> redirect to login
-      const status = err?.response?.status;
-      if (status === 401 || status === 403) {
-        toast.error('Your session has expired. Please log in again.');
-        navigate('/login');
-        return;
-      }
+  getAllWithStats: async (): Promise<any[]> => {
+    const response = await api.get('/quiz/results/all');
+    return response.data;
+  },
 
-      // If endpoint missing (404) or other server error, fallback to /quiz/all (no stats)
-      if (status === 404) {
-        try {
-          const all = await quizAPI.getAll();
-          const mapped = (all || []).map((q: any) => ({
-            _id: q._id,
-            title: q.title,
-            description: q.description || '',
-            duration: q.duration ?? null,
-            createdAt: q.createdAt,
-            attemptCount: 0,
-            submittedCount: 0,
-            averageScore: undefined
-          })) as QuizWithStats[];
-          setQuizzes(mapped);
-          toast('Loaded quizzes (no stats available).');
-        } catch (innerErr) {
-          console.error('Fallback /quiz/all failed:', innerErr);
-          setLoadError('Failed to load quizzes.');
-          toast.error('Failed to load quiz results');
-        }
-      } else {
-        // Generic error
-        setLoadError('Failed to load quiz results');
-        toast.error('Failed to load quiz results');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  // returns teacher view of quiz + attempts.
+  // pass live=true to request on-the-fly scoring for in-progress attempts (backend computes scores)
+  getResults: async (quizId: string, live: boolean = false): Promise<{ quiz: any; attempts: any[] }> => {
+    const response = await api.get(`/quiz/${quizId}/results${live ? '?live=true' : ''}`);
+    return response.data;
+  },
+};
 
-  const handleViewResults = (quizId: string) => {
-    navigate(`/quiz/${quizId}/results`);
-  };
+ // Students API
+export const studentsAPI = {
+  upload: async (students: Student[]): Promise<{ success: boolean; count: number }> => {
+    const response = await api.post('/students/upload', { students });
+    return response.data;
+  },
 
-  const handleRetry = () => {
-    fetchQuizzesWithStats();
-  };
+  getAll: async (): Promise<Student[]> => {
+    const response = await api.get('/students/all');
+    return response.data;
+  },
 
-  if (loading) {
-    return (
-      <div className="p-8">
-        <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">Loading results...</p>
-        </div>
-      </div>
-    );
-  }
+  delete: async (studentId: string): Promise<{ success: boolean }> => {
+    const response = await api.delete(`/students/${studentId}`);
+    return response.data;
+  },
+};
 
-  return (
-    <div className="p-8">
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Quiz Results</h1>
-          <p className="text-muted-foreground">
-            View and manage results for all your quizzes
-          </p>
-        </div>
+// Folders API
+export const foldersAPI = {
+  getAll: async () => {
+    const response = await api.get('/folders');
+    return response.data.folders;
+  },
 
-        <div className="flex items-center gap-2">
-          <Button size="sm" onClick={handleRetry} variant="ghost">
-            Refresh
-          </Button>
-        </div>
-      </div>
+  create: async (folderData: { name: string; description?: string; color?: string }) => {
+    const response = await api.post('/folders', folderData);
+    return response.data.folder;
+  },
 
-      {loadError ? (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-12">
-              <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Could not load results</h3>
-              <p className="text-muted-foreground mb-4">{loadError}</p>
-              <div className="flex justify-center gap-2">
-                <Button onClick={handleRetry}>Retry</Button>
-                <Button variant="outline" onClick={() => navigate('/create-quiz')}>
-                  Create Quiz
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ) : quizzes.length === 0 ? (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-12">
-              <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No Quiz Results Yet</h3>
-              <p className="text-muted-foreground mb-4">
-                Create and share quizzes to see student results here
-              </p>
-              <Button onClick={() => navigate('/create-quiz')}>
-                Create Your First Quiz
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {quizzes.map((quiz) => (
-            <Card
-              key={quiz._id}
-              className="hover:shadow-lg transition-shadow cursor-pointer"
-              onClick={() => handleViewResults(quiz._id)}
-            >
-              <CardHeader>
-                <CardTitle className="flex items-start gap-2">
-                  <FileText className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <span className="line-clamp-2">{quiz.title}</span>
-                </CardTitle>
-                {quiz.description && (
-                  <CardDescription className="line-clamp-2">
-                    {quiz.description}
-                  </CardDescription>
-                )}
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">
-                      {quiz.attemptCount} {quiz.attemptCount === 1 ? 'attempt' : 'attempts'}
-                    </span>
-                    <span className="text-muted-foreground">•</span>
-                    <span className="text-muted-foreground">
-                      {quiz.submittedCount} submitted
-                    </span>
-                  </div>
+  update: async (folderId: string, folderData: { name?: string; description?: string; color?: string }) => {
+    const response = await api.put(`/folders/${folderId}`, folderData);
+    return response.data.folder;
+  },
 
-                  {quiz.duration != null && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">
-                        {quiz.duration} minutes
-                      </span>
-                    </div>
-                  )}
+  delete: async (folderId: string) => {
+    const response = await api.delete(`/folders/${folderId}`);
+    return response.data;
+  },
+};
 
-                  {quiz.averageScore !== undefined && quiz.submittedCount > 0 && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">
-                        Avg: {quiz.averageScore.toFixed(1)}%
-                      </span>
-                    </div>
-                  )}
+// Bookmarks API
+export const bookmarksAPI = {
+  getAll: async () => {
+    const response = await api.get('/bookmarks');
+    return response.data.bookmarks;
+  },
 
-                  <Button
-                    className="w-full mt-4"
-                    variant="outline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleViewResults(quiz._id);
-                    }}
-                  >
-                    View Results
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+  create: async (bookmarkData: any) => {
+    const response = await api.post('/bookmarks', bookmarkData);
+    return response.data.bookmark;
+  },
+
+  delete: async (bookmarkId: string) => {
+    const response = await api.delete(`/bookmarks/${bookmarkId}`);
+    return response.data;
+  },
+};
+
+export default api;

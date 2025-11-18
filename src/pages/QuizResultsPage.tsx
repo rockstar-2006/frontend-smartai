@@ -1,9 +1,4 @@
-<<<<<<< HEAD
-// src/pages/QuizResultsPage.tsx
 import { useState, useEffect, useCallback, useRef } from 'react';
-=======
-import { useState, useEffect, useCallback } from 'react';
->>>>>>> 8ca4e2e5c968921e3f5aff4a4124db26d5062779
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,11 +10,8 @@ import { quizAPI } from '@/services/api';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-<<<<<<< HEAD
 // Poll interval (ms) — adjust as needed. 5000ms = 5s.
 const POLL_INTERVAL_MS = 5000;
-=======
->>>>>>> 8ca4e2e5c968921e3f5aff4a4124db26d5062779
 
 interface QuizAttempt {
   _id: string;
@@ -33,12 +25,8 @@ interface QuizAttempt {
   maxMarks: number;
   percentage: number;
   status: string;
-<<<<<<< HEAD
   submittedAt?: string;
   updatedAt?: string;
-=======
-  submittedAt: string;
->>>>>>> 8ca4e2e5c968921e3f5aff4a4124db26d5062779
 }
 
 export default function QuizResultsPage() {
@@ -50,7 +38,6 @@ export default function QuizResultsPage() {
   const [attempts, setAttempts] = useState<QuizAttempt[]>([]);
   const [autoRefresh, setAutoRefresh] = useState(true);
 
-<<<<<<< HEAD
   const pollingRef = useRef<number | null>(null);
 
   const fetchResults = useCallback(async (live = true) => {
@@ -59,13 +46,6 @@ export default function QuizResultsPage() {
       const data = await quizAPI.getResults(quizId!, live);
       setQuizTitle(data.quiz.title);
       setAttempts(data.attempts || []);
-=======
-  const fetchResults = useCallback(async () => {
-    try {
-      const data = await quizAPI.getResults(quizId!);
-      setQuizTitle(data.quiz.title);
-      setAttempts(data.attempts);
->>>>>>> 8ca4e2e5c968921e3f5aff4a4124db26d5062779
     } catch (error: any) {
       console.error('Error fetching results:', error);
       toast({
@@ -79,7 +59,6 @@ export default function QuizResultsPage() {
   }, [quizId]);
 
   useEffect(() => {
-<<<<<<< HEAD
     // initial fetch (with live scoring)
     fetchResults(true);
   }, [fetchResults]);
@@ -107,20 +86,6 @@ export default function QuizResultsPage() {
         pollingRef.current = null;
       }
     };
-=======
-    fetchResults();
-  }, [fetchResults]);
-
-  // Auto-refresh every 10 seconds if enabled
-  useEffect(() => {
-    if (!autoRefresh) return;
-
-    const interval = setInterval(() => {
-      fetchResults();
-    }, 10000);
-
-    return () => clearInterval(interval);
->>>>>>> 8ca4e2e5c968921e3f5aff4a4124db26d5062779
   }, [autoRefresh, fetchResults]);
 
   const handleDownloadExcel = async (detailed: boolean = false) => {
@@ -170,17 +135,10 @@ export default function QuizResultsPage() {
   const calculateStats = () => {
     if (attempts.length === 0) return null;
 
-<<<<<<< HEAD
     const avgPercentage = attempts.reduce((sum, a) => sum + (a.percentage || 0), 0) / attempts.length;
     const passCount = attempts.filter((a) => (a.percentage || 0) >= 40).length;
     const highestScore = Math.max(...attempts.map((a) => (a.totalMarks || 0)));
     const lowestScore = Math.min(...attempts.map((a) => (a.totalMarks || 0)));
-=======
-    const avgPercentage = attempts.reduce((sum, a) => sum + a.percentage, 0) / attempts.length;
-    const passCount = attempts.filter((a) => a.percentage >= 40).length;
-    const highestScore = Math.max(...attempts.map((a) => a.totalMarks));
-    const lowestScore = Math.min(...attempts.map((a) => a.totalMarks));
->>>>>>> 8ca4e2e5c968921e3f5aff4a4124db26d5062779
 
     return {
       avgPercentage: avgPercentage.toFixed(2),
@@ -215,11 +173,7 @@ export default function QuizResultsPage() {
             <h1 className="text-3xl font-bold tracking-tight">Quiz Results</h1>
             <p className="text-lg text-muted-foreground">
               {quizTitle}
-<<<<<<< HEAD
               {autoRefresh && <span className="ml-2 text-xs text-emerald-600">(Live)</span>}
-=======
-              {autoRefresh && <span className="ml-2 text-xs">(Auto-refreshing every 10s)</span>}
->>>>>>> 8ca4e2e5c968921e3f5aff4a4124db26d5062779
             </p>
           </div>
 
@@ -340,19 +294,11 @@ export default function QuizResultsPage() {
                           {attempt.studentYear}/{attempt.studentSemester}
                         </TableCell>
                         <TableCell>
-<<<<<<< HEAD
                           {typeof attempt.totalMarks === 'number' ? attempt.totalMarks : '—'}/{typeof attempt.maxMarks === 'number' ? attempt.maxMarks : '—'}
                         </TableCell>
                         <TableCell>
                           <span className={ (attempt.percentage || 0) >= 40 ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>
                             {(attempt.percentage || 0).toFixed(1)}%
-=======
-                          {attempt.totalMarks}/{attempt.maxMarks}
-                        </TableCell>
-                        <TableCell>
-                          <span className={attempt.percentage >= 40 ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>
-                            {attempt.percentage.toFixed(1)}%
->>>>>>> 8ca4e2e5c968921e3f5aff4a4124db26d5062779
                           </span>
                         </TableCell>
                         <TableCell>
@@ -361,11 +307,7 @@ export default function QuizResultsPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-<<<<<<< HEAD
                           {attempt.submittedAt ? new Date(attempt.submittedAt).toLocaleString() : (attempt.updatedAt ? new Date(attempt.updatedAt).toLocaleString() : '-')}
-=======
-                          {new Date(attempt.submittedAt).toLocaleString()}
->>>>>>> 8ca4e2e5c968921e3f5aff4a4124db26d5062779
                         </TableCell>
                       </TableRow>
                     ))}
