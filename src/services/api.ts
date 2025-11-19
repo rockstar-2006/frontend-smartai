@@ -1,157 +1,202 @@
 // src/services/api.ts
-import axios, { AxiosInstance } from 'axios';
+import axios from 'axios';
 import { Quiz, Student } from '@/types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
-// axios instance used across the app
-const api: AxiosInstance = axios.create({
+const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
   },
-  withCredentials: true // send cookies (important for cookie auth)
+  withCredentials: true,
 });
 
-/* ----------------------
-   AUTH
-   ---------------------- */
-export const authAPI = {
-  register: async (payload: { name: string; email: string; password: string; role?: string }) => {
-    const resp = await api.post('/auth/register', payload);
-    return resp.data;
-  },
-
-  login: async (payload: { email: string; password: string }) => {
-    const resp = await api.post('/auth/login', payload);
-    return resp.data;
-  },
-
-  me: async () => {
-    const resp = await api.get('/auth/me');
-    return resp.data;
-  },
-
-  logout: async () => {
-    const resp = await api.post('/auth/logout');
-    return resp.data;
+// Add response interceptor for better error handling
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error('API Error:', error.response?.data || error.message);
+    return Promise.reject(error);
   }
-};
+);
 
-/* ----------------------
-   QUIZ
-   ---------------------- */
+// Quiz API
 export const quizAPI = {
-  save: async (quiz: Partial<Quiz>) => {
-    const resp = await api.post('/quiz/save', quiz);
-    return resp.data;
+  save: async (quiz: Partial<Quiz>): Promise<{ success: boolean; quizId: string; quiz?: any }> => {
+    try {
+      const response = await api.post('/quiz/save', quiz);
+      return response.data;
+    } catch (error) {
+      console.error('Quiz save error:', error);
+      throw error;
+    }
   },
 
-  update: async (quizId: string, quiz: Partial<Quiz>) => {
-    const resp = await api.put(`/quiz/${quizId}`, quiz);
-    return resp.data;
-  },
-
-  delete: async (quizId: string) => {
-    const resp = await api.delete(`/quiz/${quizId}`);
-    return resp.data;
+  share: async (shareData: {
+    quizId: string;
+    recipients: string[];
+    message?: string;
+    expiresInHours?: number;
+  }) => {
+    try {
+      const response = await api.post('/quiz/share', shareData);
+      return response.data;
+    } catch (error) {
+      console.error('Quiz share error:', error);
+      throw error;
+    }
   },
 
   getAll: async (): Promise<Quiz[]> => {
-    const resp = await api.get('/quiz/all');
-    return resp.data;
+    try {
+      const response = await api.get('/quiz/all');
+      return response.data;
+    } catch (error) {
+      console.error('Get all quizzes error:', error);
+      throw error;
+    }
   },
 
-  // aggregated stats endpoint (teacher dashboard cards)
+  delete: async (quizId: string): Promise<{ success: boolean }> => {
+    try {
+      const response = await api.delete(`/quiz/${quizId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Delete quiz error:', error);
+      throw error;
+    }
+  },
+
   getAllWithStats: async (): Promise<any[]> => {
-    const resp = await api.get('/quiz/results/all');
-    return resp.data;
+    try {
+      const response = await api.get('/quiz/results/all');
+      return response.data;
+    } catch (error) {
+      console.error('Get quiz stats error:', error);
+      throw error;
+    }
   },
 
-  // teacher results endpoint. pass live=true to compute on-the-fly scoring (includes in-progress attempts)
-  getResults: async (quizId: string, live: boolean = false): Promise<{ quiz: any; attempts: any[] }> => {
-    const resp = await api.get(`/quiz/${quizId}/results${live ? '?live=true' : ''}`);
-    return resp.data;
+  getResults: async (quizId: string, live: boolean = false) => {
+    try {
+      const response = await api.get(`/quiz/${quizId}/results${live ? '?live=true' : ''}`);
+      return response.data;
+    } catch (error) {
+      console.error('Get quiz results error:', error);
+      throw error;
+    }
   },
-
-  // share endpoint - recipients array or comma separated string allowed
-  share: async (payload: { quizId: string; recipients?: string[] | string; message?: string; expiresInHours?: number }) => {
-    const resp = await api.post('/quiz/share', payload);
-    return resp.data;
-  },
-
-  // download Excel (summary/detailed). returns blob
-  downloadResults: async (quizId: string, detailed: boolean = false): Promise<Blob> => {
-    const resp = await api.get(`/quiz/${quizId}/results/download${detailed ? '?detailed=true' : ''}`, {
-      responseType: 'blob'
-    });
-    return resp.data;
-  }
 };
 
-/* ----------------------
-   STUDENTS
-   ---------------------- */
+// Students API
 export const studentsAPI = {
   upload: async (students: Student[]) => {
-    const resp = await api.post('/students/upload', { students });
-    return resp.data;
+    try {
+      const response = await api.post('/students/upload', { students });
+      return response.data;
+    } catch (error) {
+      console.error('Upload students error:', error);
+      throw error;
+    }
   },
 
   getAll: async (): Promise<Student[]> => {
-    const resp = await api.get('/students/all');
-    return resp.data;
+    try {
+      const response = await api.get('/students/all');
+      return response.data;
+    } catch (error) {
+      console.error('Get all students error:', error);
+      throw error;
+    }
   },
 
   delete: async (studentId: string) => {
-    const resp = await api.delete(`/students/${studentId}`);
-    return resp.data;
-  }
+    try {
+      const response = await api.delete(`/students/${studentId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Delete student error:', error);
+      throw error;
+    }
+  },
 };
 
-/* ----------------------
-   FOLDERS
-   ---------------------- */
+// Folders API
 export const foldersAPI = {
   getAll: async () => {
-    const resp = await api.get('/folders');
-    return resp.data.folders;
+    try {
+      const response = await api.get('/folders');
+      return response.data.folders;
+    } catch (error) {
+      console.error('Get folders error:', error);
+      throw error;
+    }
   },
 
   create: async (folderData: { name: string; description?: string; color?: string }) => {
-    const resp = await api.post('/folders', folderData);
-    return resp.data.folder;
+    try {
+      const response = await api.post('/folders', folderData);
+      return response.data.folder;
+    } catch (error) {
+      console.error('Create folder error:', error);
+      throw error;
+    }
   },
 
   update: async (folderId: string, folderData: { name?: string; description?: string; color?: string }) => {
-    const resp = await api.put(`/folders/${folderId}`, folderData);
-    return resp.data.folder;
+    try {
+      const response = await api.put(`/folders/${folderId}`, folderData);
+      return response.data.folder;
+    } catch (error) {
+      console.error('Update folder error:', error);
+      throw error;
+    }
   },
 
   delete: async (folderId: string) => {
-    const resp = await api.delete(`/folders/${folderId}`);
-    return resp.data;
-  }
+    try {
+      const response = await api.delete(`/folders/${folderId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Delete folder error:', error);
+      throw error;
+    }
+  },
 };
 
-/* ----------------------
-   BOOKMARKS
-   ---------------------- */
+// Bookmarks API - FIXED: Handle different response structure
 export const bookmarksAPI = {
   getAll: async () => {
-    const resp = await api.get('/bookmarks');
-    return resp.data.bookmarks;
+    try {
+      const response = await api.get('/bookmarks');
+      // Handle both response structures
+      return response.data.bookmarks || response.data || [];
+    } catch (error) {
+      console.error('Get bookmarks error:', error);
+      return []; // Return empty array instead of throwing
+    }
   },
 
   create: async (bookmarkData: any) => {
-    const resp = await api.post('/bookmarks', bookmarkData);
-    return resp.data.bookmark;
+    try {
+      const response = await api.post('/bookmarks', bookmarkData);
+      return response.data.bookmark || response.data;
+    } catch (error) {
+      console.error('Create bookmark error:', error);
+      throw error;
+    }
   },
 
   delete: async (bookmarkId: string) => {
-    const resp = await api.delete(`/bookmarks/${bookmarkId}`);
-    return resp.data;
-  }
+    try {
+      const response = await api.delete(`/bookmarks/${bookmarkId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Delete bookmark error:', error);
+      throw error;
+    }
+  },
 };
 
 export default api;
