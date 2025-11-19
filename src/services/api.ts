@@ -1,116 +1,157 @@
 // src/services/api.ts
-import axios from 'axios';
+import axios, { AxiosInstance } from 'axios';
 import { Quiz, Student } from '@/types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
-const api = axios.create({
+// axios instance used across the app
+const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   headers: {
-    'Content-Type': 'application/json',
+    'Content-Type': 'application/json'
   },
-  withCredentials: true, // Enable sending cookies
+  withCredentials: true // send cookies (important for cookie auth)
 });
 
-// Quiz API
-export const quizAPI = {
-  // Save quiz: backend will create and return quizId
-  save: async (quiz: Partial<Quiz>): Promise<{ success: boolean; quizId: string; quiz?: any }> => {
-    const response = await api.post('/quiz/save', quiz);
-    return response.data;
+/* ----------------------
+   AUTH
+   ---------------------- */
+export const authAPI = {
+  register: async (payload: { name: string; email: string; password: string; role?: string }) => {
+    const resp = await api.post('/auth/register', payload);
+    return resp.data;
   },
 
-  // Share: backend expects { quizId, recipients, message?, expiresInHours? }
-  share: async (shareData: {
-    quizId: string;
-    recipients: string[];
-    message?: string;
-    expiresInHours?: number;
-  }): Promise<{ success: boolean; message?: string; links?: Array<{ email: string; link: string; status: string; shareId?: string }>; failed?: any[] }> => {
-    const response = await api.post('/quiz/share', shareData);
-    return response.data;
+  login: async (payload: { email: string; password: string }) => {
+    const resp = await api.post('/auth/login', payload);
+    return resp.data;
+  },
+
+  me: async () => {
+    const resp = await api.get('/auth/me');
+    return resp.data;
+  },
+
+  logout: async () => {
+    const resp = await api.post('/auth/logout');
+    return resp.data;
+  }
+};
+
+/* ----------------------
+   QUIZ
+   ---------------------- */
+export const quizAPI = {
+  save: async (quiz: Partial<Quiz>) => {
+    const resp = await api.post('/quiz/save', quiz);
+    return resp.data;
+  },
+
+  update: async (quizId: string, quiz: Partial<Quiz>) => {
+    const resp = await api.put(`/quiz/${quizId}`, quiz);
+    return resp.data;
+  },
+
+  delete: async (quizId: string) => {
+    const resp = await api.delete(`/quiz/${quizId}`);
+    return resp.data;
   },
 
   getAll: async (): Promise<Quiz[]> => {
-    const response = await api.get('/quiz/all');
-    return response.data;
+    const resp = await api.get('/quiz/all');
+    return resp.data;
   },
 
-  delete: async (quizId: string): Promise<{ success: boolean }> => {
-    const response = await api.delete(`/quiz/${quizId}`);
-    return response.data;
-  },
-
-  // New: allow asking for live computed scoring by passing live=true
+  // aggregated stats endpoint (teacher dashboard cards)
   getAllWithStats: async (): Promise<any[]> => {
-    const response = await api.get('/quiz/results/all');
-    return response.data;
+    const resp = await api.get('/quiz/results/all');
+    return resp.data;
   },
 
-  // getResults supports a live flag to compute scores on the fly (live=true)
+  // teacher results endpoint. pass live=true to compute on-the-fly scoring (includes in-progress attempts)
   getResults: async (quizId: string, live: boolean = false): Promise<{ quiz: any; attempts: any[] }> => {
-    const response = await api.get(`/quiz/${quizId}/results${live ? '?live=true' : ''}`);
-    return response.data;
+    const resp = await api.get(`/quiz/${quizId}/results${live ? '?live=true' : ''}`);
+    return resp.data;
   },
+
+  // share endpoint - recipients array or comma separated string allowed
+  share: async (payload: { quizId: string; recipients?: string[] | string; message?: string; expiresInHours?: number }) => {
+    const resp = await api.post('/quiz/share', payload);
+    return resp.data;
+  },
+
+  // download Excel (summary/detailed). returns blob
+  downloadResults: async (quizId: string, detailed: boolean = false): Promise<Blob> => {
+    const resp = await api.get(`/quiz/${quizId}/results/download${detailed ? '?detailed=true' : ''}`, {
+      responseType: 'blob'
+    });
+    return resp.data;
+  }
 };
 
-// Students API
+/* ----------------------
+   STUDENTS
+   ---------------------- */
 export const studentsAPI = {
-  upload: async (students: Student[]): Promise<{ success: boolean; count: number }> => {
-    const response = await api.post('/students/upload', { students });
-    return response.data;
+  upload: async (students: Student[]) => {
+    const resp = await api.post('/students/upload', { students });
+    return resp.data;
   },
 
   getAll: async (): Promise<Student[]> => {
-    const response = await api.get('/students/all');
-    return response.data;
+    const resp = await api.get('/students/all');
+    return resp.data;
   },
 
-  delete: async (studentId: string): Promise<{ success: boolean }> => {
-    const response = await api.delete(`/students/${studentId}`);
-    return response.data;
-  },
+  delete: async (studentId: string) => {
+    const resp = await api.delete(`/students/${studentId}`);
+    return resp.data;
+  }
 };
 
-// Folders API
+/* ----------------------
+   FOLDERS
+   ---------------------- */
 export const foldersAPI = {
   getAll: async () => {
-    const response = await api.get('/folders');
-    return response.data.folders;
+    const resp = await api.get('/folders');
+    return resp.data.folders;
   },
 
   create: async (folderData: { name: string; description?: string; color?: string }) => {
-    const response = await api.post('/folders', folderData);
-    return response.data.folder;
+    const resp = await api.post('/folders', folderData);
+    return resp.data.folder;
   },
 
   update: async (folderId: string, folderData: { name?: string; description?: string; color?: string }) => {
-    const response = await api.put(`/folders/${folderId}`, folderData);
-    return response.data.folder;
+    const resp = await api.put(`/folders/${folderId}`, folderData);
+    return resp.data.folder;
   },
 
   delete: async (folderId: string) => {
-    const response = await api.delete(`/folders/${folderId}`);
-    return response.data;
-  },
+    const resp = await api.delete(`/folders/${folderId}`);
+    return resp.data;
+  }
 };
 
-// Bookmarks API
+/* ----------------------
+   BOOKMARKS
+   ---------------------- */
 export const bookmarksAPI = {
   getAll: async () => {
-    const response = await api.get('/bookmarks');
-    return response.data.bookmarks;
+    const resp = await api.get('/bookmarks');
+    return resp.data.bookmarks;
   },
 
   create: async (bookmarkData: any) => {
-    const response = await api.post('/bookmarks', bookmarkData);
-    return response.data.bookmark;
+    const resp = await api.post('/bookmarks', bookmarkData);
+    return resp.data.bookmark;
   },
 
   delete: async (bookmarkId: string) => {
-    const response = await api.delete(`/bookmarks/${bookmarkId}`);
-    return response.data;
-  },
+    const resp = await api.delete(`/bookmarks/${bookmarkId}`);
+    return resp.data;
+  }
 };
 
 export default api;
