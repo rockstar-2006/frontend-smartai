@@ -1,3 +1,4 @@
+// src/services/api.ts
 import axios from 'axios';
 import { Quiz, Student } from '@/types';
 
@@ -40,18 +41,20 @@ export const quizAPI = {
     return response.data;
   },
 
+  // New: allow asking for live computed scoring by passing live=true
   getAllWithStats: async (): Promise<any[]> => {
     const response = await api.get('/quiz/results/all');
     return response.data;
   },
 
+  // getResults supports a live flag to compute scores on the fly (live=true)
   getResults: async (quizId: string, live: boolean = false): Promise<{ quiz: any; attempts: any[] }> => {
     const response = await api.get(`/quiz/${quizId}/results${live ? '?live=true' : ''}`);
     return response.data;
   },
 };
 
- // Students API
+// Students API
 export const studentsAPI = {
   upload: async (students: Student[]): Promise<{ success: boolean; count: number }> => {
     const response = await api.post('/students/upload', { students });
